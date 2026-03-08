@@ -578,6 +578,16 @@ function initMap() {
       });
     }
   });
+  // When a cluster is clicked, filter the list to boats in those bases
+  markerGroup.on('clusterclick', function(e) {
+    const childMarkers = e.layer.getAllChildMarkers();
+    const baseNames = [...new Set(childMarkers.map(m => m.options.baseName).filter(Boolean))];
+    if (baseNames.length) {
+      state.bases = baseNames;
+      updateTriggerLabel('base', 'bases');
+      renderListOnly();
+    }
+  });
   map.addLayer(markerGroup);
 }
 
@@ -609,6 +619,7 @@ function updateMap(results) {
     const priceStr = minPrice && minPrice < Infinity ? `€${Math.round(minPrice).toLocaleString()}` : '';
     const marker = L.marker(coords, {
       boatCount: count,
+      baseName: baseName,
       icon: L.divIcon({
         html: `<div class="base-marker" style="width:${size}px;height:${size}px;font-size:${size > 32 ? 13 : 11}px">${count}</div>`,
         className: '', iconSize: [size, size]
@@ -622,7 +633,7 @@ function updateMap(results) {
       // Filter to this base
       state.bases = [baseName];
       updateTriggerLabel('base', 'bases');
-      render();
+      renderListOnly();
     });
     markers.push(marker);
   }
@@ -685,6 +696,18 @@ function card(b) {
         <div class="price-deposit">deposit<br/>${fmt(b.deposit_eur)}</div>
       </div>
     </div>`;
+}
+
+// renderListOnly: updates list + UI but does NOT rebuild map markers (used for map clicks)
+function renderListOnly() {
+  const results = filtered();
+  document.getElementById("count").innerHTML = `<strong>${results.length}</strong> boats matched`;
+  document.getElementById("grid").innerHTML = results.length
+    ? results.map(card).join("")
+    : `<div class="no-results"><span>⚓</span>No boats match your filters</div>`;
+  buildSortBar();
+  const resetBtn = document.getElementById('reset-btn');
+  if (resetBtn) resetBtn.classList.toggle('visible', hasActiveFilters());
 }
 
 function render() {
